@@ -1,4 +1,3 @@
-# Nom du workflow mis à jour
 name: 🐳 Build, Scan, and Publish Docker Image
 
 on:
@@ -6,7 +5,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build-scan-and-publish: # J'ai renommé le job pour plus de clarté
+  build-scan-and-publish:
     runs-on: ubuntu-latest
     
     permissions:
@@ -34,26 +33,18 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          load: true   # Charge l'image dans le daemon local
-          push: false  # NE POUSSE PAS encore l'image
+          load: true
+          push: false
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-
-            - name: 🛡️ Scan image for vulnerabilities (Trivy)
+      - name: 🛡️ Scan image for vulnerabilities (Trivy)
         uses: aquasecurity/trivy-action@master
         with:
-          # Référence l'image taggée 'latest' qui vient d'être buildée
           image-ref: 'ghcr.io/${{ github.repository }}:latest'
           format: 'table'
-          
-          # Fait échouer le workflow si des vulnérabilités sont trouvées
-          exit-code: '1' 
-          
-          # N'échoue pas pour des vulnérabilités qui n'ont pas encore de correctif
-          ignore-unfixed: true 
-          
-          # Scanne et échoue uniquement pour les sévérités ÉLEVÉE ou CRITIQUE
+          exit-code: '1'
+          ignore-unfixed: true
           severity: 'CRITICAL,HIGH'
 
       - name: 🚀 Push image to GHCR
