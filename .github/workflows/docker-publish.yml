@@ -1,11 +1,11 @@
-name: 🐳 Build and Publish Docker Image
+name: 🐳 Build, Scan, and Publish Docker Image
 
 on:
   push:
     branches: [ "main" ]
 
 jobs:
-  build-and-publish:
+  build-scan-and-publish:
     runs-on: ubuntu-latest
     
     permissions:
@@ -29,10 +29,13 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository }}
 
-      - name: Build and push Docker image
+      - name: 🛠️ Build image and load to local daemon
         uses: docker/build-push-action@v5
         with:
           context: .
-          push: true
+          load: true
+          push: false
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      - name: 🛡️ Scan
