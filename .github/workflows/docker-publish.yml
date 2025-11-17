@@ -30,8 +30,13 @@ jobs:
           push: false
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-      - name: Set permissions for docker.sock
-        run: sudo chmod 777 /var/run/docker.sock
+      - name: Debug and Set permissions for docker.sock
+        run: |
+          echo "--- PERMISSIONS AVANT ---"
+          ls -l /var/run/docker.sock
+          sudo chmod 777 /var/run/docker.sock
+          echo "--- PERMISSIONS APRES ---"
+          ls -l /var/run/docker.sock
       - name: 🛡️ Scan image for vulnerabilities (Trivy)
         uses: aquasecurity/trivy-action@master
         with:
