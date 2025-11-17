@@ -32,12 +32,9 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
       - name: 🛡️ Scan image for vulnerabilities (Trivy)
         run: |
-          sudo apt-get update
-          sudo apt-get install -y wget apt-transport-https gnupg lsb-release
-          wget -qO - https://aquasecurity.github.io/trivy-repo/aqua-security.asc | sudo apt-key add -
-          echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
-          sudo apt-get update
-          sudo apt-get install -y trivy
+          wget https://github.com/aquasecurity/trivy/releases/download/v0.52.2/trivy_0.52.2_Linux-64bit.tar.gz
+          tar zxvf trivy_0.52.2_Linux-64bit.tar.gz
+          sudo mv trivy /usr/local/bin/
           trivy image --exit-code 1 --severity CRITICAL,HIGH --ignore-unfixed 'ghcr.io/${{ github.repository }}:latest'
       - name: 🚀 Push image to GHCR
         run: docker push --all-tags ghcr.io/${{ github.repository }}
