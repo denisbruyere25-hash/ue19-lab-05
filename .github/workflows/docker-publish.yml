@@ -1,33 +1,22 @@
-# Nom du workflow qui apparaîtra dans l'onglet "Actions" de GitHub
-name: 🐳 Build and Publish Docker Image
+# Nom du workflow mis à jour
+name: 🐳 Build, Scan, and Publish Docker Image
 
-# Déclencheur : s'exécute uniquement lors d'un "push" sur la branche "main"
 on:
   push:
     branches: [ "main" ]
 
-# Tâches à exécuter
 jobs:
-  build-and-publish:
-    # Utilise la dernière version d'Ubuntu comme machine virtuelle
+  build-scan-and-publish: # J'ai renommé le job pour plus de clarté
     runs-on: ubuntu-latest
     
-    # --- PERMISSIONS TRÈS IMPORTANTES ---
-    # Ces permissions sont nécessaires pour que l'action puisse
-    # 1. Lire le contenu du repository (contents: read)
-    # 2. Écrire dans le registre de packages (packages: write)
     permissions:
       contents: read
       packages: write
 
-    # Étapes du job
     steps:
-      # 1. Récupère le code de votre repository
       - name: Check out the repo
         uses: actions/checkout@v4
 
-      # 2. Se connecte au registre de conteneurs de GitHub (ghcr.io)
-      # (Utilise un GITHUB_TOKEN temporaire et sécurisé)
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -35,21 +24,37 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # 3. Étape qui génère automatiquement les "tags" (étiquettes)
-      # pour l'image Docker (ex: "latest", nom de la branche, etc.)
-      # et s'assure que tout est en minuscules.
       - name: Extract metadata for Docker
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository }}
 
-      # 4. Construit l'image Docker (en utilisant votre Dockerfile)
-      # et la pousse (publie) sur ghcr.io
-      - name: Build and push Docker image
+      - name: 🛠️ Build image and load to local daemon
         uses: docker/build-push-action@v5
         with:
-          context: . # Indique que le Dockerfile est à la racine
-          push: true # Indique qu'il faut publier l'image
+          context: .
+          load: true   # Charge l'image dans le daemon local
+          push: false  # NE POUSSE PAS encore l'image
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+
+            - name: 🛡️ Scan image for vulnerabilities (Trivy)
+        uses: aquasecurity/trivy-action@master
+        with:
+          # Référence l'image taggée 'latest' qui vient d'être buildée
+          image-ref: 'ghcr.io/${{ github.repository }}:latest'
+          format: 'table'
+          
+          # Fait échouer le workflow si des vulnérabilités sont trouvées
+          exit-code: '1' 
+          
+          # N'échoue pas pour des vulnérabilités qui n'ont pas encore de correctif
+          ignore-unfixed: true 
+          
+          # Scanne et échoue uniquement pour les sévérités ÉLEVÉE ou CRITIQUE
+          severity: 'CRITICAL,HIGH'
+
+      - name: 🚀 Push image to GHCR
+        run: docker push --all-tags ghcr.io/${{ github.repository }}
