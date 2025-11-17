@@ -1,0 +1,55 @@
+# Nom du workflow qui apparaîtra dans l'onglet "Actions" de GitHub
+name: 🐳 Build and Publish Docker Image
+
+# Déclencheur : s'exécute uniquement lors d'un "push" sur la branche "main"
+on:
+  push:
+    branches: [ "main" ]
+
+# Tâches à exécuter
+jobs:
+  build-and-publish:
+    # Utilise la dernière version d'Ubuntu comme machine virtuelle
+    runs-on: ubuntu-latest
+    
+    # --- PERMISSIONS TRÈS IMPORTANTES ---
+    # Ces permissions sont nécessaires pour que l'action puisse
+    # 1. Lire le contenu du repository (contents: read)
+    # 2. Écrire dans le registre de packages (packages: write)
+    permissions:
+      contents: read
+      packages: write
+
+    # Étapes du job
+    steps:
+      # 1. Récupère le code de votre repository
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      # 2. Se connecte au registre de conteneurs de GitHub (ghcr.io)
+      # (Utilise un GITHUB_TOKEN temporaire et sécurisé)
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 3. Étape qui génère automatiquement les "tags" (étiquettes)
+      # pour l'image Docker (ex: "latest", nom de la branche, etc.)
+      # et s'assure que tout est en minuscules.
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+
+      # 4. Construit l'image Docker (en utilisant votre Dockerfile)
+      # et la pousse (publie) sur ghcr.io
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: . # Indique que le Dockerfile est à la racine
+          push: true # Indique qu'il faut publier l'image
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
