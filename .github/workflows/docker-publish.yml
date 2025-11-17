@@ -35,6 +35,7 @@ jobs:
           wget https://github.com/aquasecurity/trivy/releases/download/v0.52.2/trivy_0.52.2_Linux-64bit.tar.gz
           tar zxvf trivy_0.52.2_Linux-64bit.tar.gz
           sudo mv trivy /usr/local/bin/
-          trivy image --exit-code 1 --severity CRITICAL,HIGH --ignore-unfixed 'ghcr.io/${{ github.repository }}:latest'
+          sudo trivy image --exit-code 1 --severity CRITICAL,HIGH --ignore-unfixed 'ghcr.io/${{ github.repository }}:latest'
+          
       - name: 🚀 Push image to GHCR
         run: docker push --all-tags ghcr.io/${{ github.repository }}
