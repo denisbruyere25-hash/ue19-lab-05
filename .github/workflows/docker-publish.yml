@@ -28,14 +28,19 @@ jobs:
           context: .
           load: true
           push: false
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: |
+            ${{ steps.meta.outputs.tags }}
+            ghcr.io/${{ github.repository }}:latest
           labels: ${{ steps.meta.outputs.labels }}
+      - name: Set permissions for docker.sock
+        run: sudo chmod 666 /var/run/docker.sock
       - name: 🛡️ Scan image for vulnerabilities (Trivy)
-        run: |
-          wget https://github.com/aquasecurity/trivy/releases/download/v0.52.2/trivy_0.52.2_Linux-64bit.tar.gz
-          tar zxvf trivy_0.52.2_Linux-64bit.tar.gz
-          sudo mv trivy /usr/local/bin/
-          sudo trivy image --exit-code 1 --severity CRITICAL,HIGH --ignore-unfixed 'ghcr.io/${{ github.repository }}:latest'
-          
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'ghcr.io/${{ github.repository }}:latest'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
       - name: 🚀 Push image to GHCR
         run: docker push --all-tags ghcr.io/${{ github.repository }}
